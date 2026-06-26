@@ -64,12 +64,12 @@ float GetCpuUsage()
 
 unsigned long GetMemTotal()
 {
-    /*Byte*/
+    /*Byte - Note: sysinfo returns memory units that need to be multiplied by mem_unit*/
     struct sysinfo s_info;
 
     if(sysinfo(&s_info) == 0)
     {
-        return s_info.totalram;
+        return s_info.totalram * s_info.mem_unit;
     }
     else
     {
@@ -79,10 +79,11 @@ unsigned long GetMemTotal()
 
 unsigned long GetMemFree()
 {
+    /*Byte - Note: sysinfo returns memory units that need to be multiplied by mem_unit*/
     struct sysinfo s_info;
     if(sysinfo(&s_info) == 0)
     {
-        return s_info.freeram;
+        return s_info.freeram * s_info.mem_unit;
     }
     else
     {
