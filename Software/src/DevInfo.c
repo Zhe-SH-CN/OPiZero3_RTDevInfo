@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <sys/statfs.h>
+#include <string.h>
 #include "DevInfo.h"
 
 #define TEMP_FILE_PATH  "/sys/class/thermal/thermal_zone0/temp"
@@ -64,31 +65,49 @@ float GetCpuUsage()
 
 unsigned long GetMemTotal()
 {
-    /*Byte - Note: sysinfo returns memory units that need to be multiplied by mem_unit*/
-    struct sysinfo s_info;
+    /*Byte - Read from /proc/meminfo for accurate values*/
+    FILE *fp;
+    char buff[256] = "";
+    unsigned long totalMem = 0;
 
-    if(sysinfo(&s_info) == 0)
+    fp = fopen("/proc/meminfo", "r");
+    if (fp != NULL)
     {
-        return (unsigned long)((unsigned long long)s_info.totalram * s_info.mem_unit);
+        while (fgets(buff, sizeof(buff), fp))
+        {
+            if (sscanf(buff, "MemTotal: %lu kB", &totalMem) == 1)
+            {
+                fclose(fp);
+                return totalMem * 1024;  // Convert KB to Bytes
+            }
+        }
+        fclose(fp);
     }
-    else
-    {
-        return -1;
-    }
+    return 0;
 }
 
 unsigned long GetMemFree()
 {
-    /*Byte - Note: sysinfo returns memory units that need to be multiplied by mem_unit*/
-    struct sysinfo s_info;
-    if(sysinfo(&s_info) == 0)
+    /*Byte - Read from /proc/meminfo for accurate values*/
+    FILE *fp;
+    char buff[256] = "";
+    unsigned long memAvailable = 0;
+
+    fp = fopen("/proc/meminfo", "r");
+    if (fp != NULL)
     {
-        return (unsigned long)((unsigned long long)s_info.freeram * s_info.mem_unit);
+        while (fgets(buff, sizeof(buff), fp))
+        {
+            // Try MemAvailable first (more accurate - includes reclaimable memory)
+            if (sscanf(buff, "MemAvailable: %lu kB", &memAvailable) == 1)
+            {
+                fclose(fp);
+                return memAvailable * 1024;  // Convert KB to Bytes
+            }
+        }
+        fclose(fp);
     }
-    else
-    {
-        return -1;
-    }
+    return 0;
 }
 
 float GetCpuTemp()
