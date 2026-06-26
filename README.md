@@ -1,91 +1,66 @@
-# 实时设备信息显示（以OrangePi 4 LTS为例）
+# 实时设备信息显示（OrangePi Zero3版本）
 
 ![](./rtdevinfo.jpg)
 
 ## 简介
 
-> 把stm32上的SSD1306驱动移植到了OPi4上，然后百度还有学习着写了一些获取设备信息的代码
->
+基于OrangePi Zero3开发的实时设备信息显示系统。通过SSD1306 OLED屏幕显示设备的实时状态信息。
 
-能显示的信息包括：
+**显示的信息包括：**
+- **网络连接状态**（WIFI/LAN图标）
+- **IP地址**（WLAN/LAN）
+- **CPU使用率**（CPU%）
+- **内存使用情况**（Mem: MB %）
+- **CPU温度**（Temp: °C）
+- **磁盘剩余容量**（Disk: GB）
+- **网络速度**（Up/Down: B/s, KB/s, MB/s, GB/s）
 
-**网络是否链接**（图标）、**IP地址**、**CPU使用率**（CPU）、**已用内存和使用率**（Mem）**CPU温度**（Temp）**磁盘剩余容量**（Disk）**上下行网速**（Up/Down）
+## 硬件要求
 
+1. **OrangePi Zero3** 开发板（或其他Linux开发板）
+   - 需要安装 wiringOP（香橙派）或 wiringPi（树莓派）
 
+2. **SSD1306 OLED屏幕** 
+   - 分辨率：128×64 像素
+   - 通信方式：四线I2C
+   - 推荐使用 0.96 英寸屏幕
 
-## 如何使用（以香橙派zero3为例）
+3. **连接线材**
+   - 杜邦线若干，或使用本仓库提供的转接板（Hardware目录下）
 
-**0）硬件准备**
+## 快速开始
 
-​	1.一块Linux开发板，安装了香橙派的wiringOP或者树莓派的wiringPi
+### 1. 检查I2C设备
 
-​	2.一个使用四线I2C通信的SSD1306驱动芯片的128*64像素OLED小屏幕
+查看I2C外设位置：
 
-​	3.杜邦线若干，或使用本仓库提供的小转接板（在Hardware目录下，是一个立创EDA工程）
-
-**1）检查一下I2C外设的位置**
-
-```
+```bash
 user@orangepizero3:~$ gpio readall
- +------+-----+----------+------+---+   H616   +---+------+----------+-----+------+
- | GPIO | wPi |   Name   | Mode | V | Physical | V | Mode | Name     | wPi | GPIO |
- +------+-----+----------+------+---+----++----+---+------+----------+-----+------+
- |      |     |     3.3V |      |   |  1 || 2  |   |      | 5V       |     |      |
- |  229 |   0 |    SDA.3 | ALT5 | 0 |  3 || 4  |   |      | 5V       |     |      |
- |  228 |   1 |    SCL.3 | ALT5 | 0 |  5 || 6  |   |      | GND      |     |      |
- |   73 |   2 |      PC9 |  OFF | 0 |  7 || 8  | 0 | OFF  | TXD.5    | 3   | 226  |
- |      |     |      GND |      |   |  9 || 10 | 0 | OFF  | RXD.5    | 4   | 227  |
- |   70 |   5 |      PC6 | ALT5 | 0 | 11 || 12 | 0 | OFF  | PC11     | 6   | 75   |
- |   69 |   7 |      PC5 |  OUT | 1 | 13 || 14 |   |      | GND      |     |      |
- |   72 |   8 |      PC8 |  OUT | 1 | 15 || 16 | 0 | OFF  | PC15     | 9   | 79   |
- |      |     |     3.3V |      |   | 17 || 18 | 0 | OFF  | PC14     | 10  | 78   |
- |  231 |  11 |   MOSI.1 | ALT4 | 0 | 19 || 20 |   |      | GND      |     |      |
- |  232 |  12 |   MISO.1 | ALT4 | 0 | 21 || 22 | 1 | OUT  | PC7      | 13  | 71   |
- |  230 |  14 |   SCLK.1 | ALT4 | 0 | 23 || 24 | 0 | ALT4 | CE.1     | 15  | 233  |
- |      |     |      GND |      |   | 25 || 26 | 1 | OUT  | PC10     | 16  | 74   |
- |   65 |  17 |      PC1 |  OFF | 0 | 27 || 28 |   |      |          |     |      |
- |  272 |  18 |     PI16 | ALT2 | 0 | 29 || 30 |   |      |          |     |      |
- |  262 |  19 |      PI6 |  OFF | 0 | 31 || 32 |   |      |          |     |      |
- |  234 |  20 |     PH10 | ALT3 | 0 | 33 || 34 |   |      |          |     |      |
- +------+-----+----------+------+---+----++----+---+------+----------+-----+------+
- | GPIO | wPi |   Name   | Mode | V | Physical | V | Mode | Name     | wPi | GPIO |
- +------+-----+----------+------+---+   H616   +---+------+----------+-----+------+
-
 ```
 
-**2）将四线I2C的OLED小屏幕连接到某个I2C外设上，例如香橙派Zero3的I2C.3**
+### 2. 连接OLED屏幕
 
-> OLED   香橙派
->
-> VCC    -   3.3V
->
-> GND   -   GND
->
-> SDA   -   SDA.3
->
-> SCL    -   SCL.3
+**接线方式（以I2C.3为例）：**
 
-**3）检查设备是否打开 I2C.3**
+| OLED | 香橙派Zero3 |
+|------|-----------|
+| VCC  | 3.3V      |
+| GND  | GND       |
+| SDA  | SDA.3 (GPIO229) |
+| SCL  | SCL.3 (GPIO228) |
 
-```
-user@orangepizero3:~$ ls /dev/i2c*
-/dev/i2c-3  /dev/i2c-4  /dev/i2c-5
-```
+### 3. 验证I2C连接
 
-如果有/dev/i2c-3，说明已经开启
+安装I2C工具：
 
-**4）检查屏幕是否正常连接**
-
-安装i2c-tools，如果已安装可以跳过
-
-```
+```bash
 sudo apt-get update
 sudo apt-get install -y i2c-tools
 ```
 
-屏幕连接的是i2c-3，所以检查i2c-3下面是否有设备
+检测I2C设备：
 
-```
+```bash
 user@orangepizero3:~$ sudo i2cdetect -y 3
      0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
 00:                         -- -- -- -- -- -- -- --
@@ -95,92 +70,133 @@ user@orangepizero3:~$ sudo i2cdetect -y 3
 40: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 50: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 60: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
-70: -- -- -- -- -- -- -- --
+70: -- -- -- -- -- --
 ```
 
-出现 3c 说明连接正常
+如果看到 `3c`，说明OLED连接正常。
 
-**5）克隆本仓库**
+### 4. 克隆仓库
 
-```
-git clone https://github.com/Temperature6/OPi4_RTDevInfo.git
-```
-
-**6）进入文件夹**
-
-```
-cd OPi4_RTDevInfo/
+```bash
+git clone https://github.com/Zhe-SH-CN/OPiZero3_RTDevInfo.git
+cd OPiZero3_RTDevInfo
 ```
 
-**7）编辑i2c配置**
+### 5. 配置参数
 
-一般来说，只需要更改i2c配置即可，其他由用户自行决定
+编辑配置文件：
 
-```
+```bash
 vim Software/inc/UserCfg.h
 ```
 
-文件内容如下
+**主要配置项：**
 
-```C
+```c
 /*无线网卡文件名*/
 #define WLAN_IF         "wlan0"
+
 /*有线网卡文件名*/
-#define ETH_IF          "eth0"
+#define ETH_IF          "end0"
+
 /*i2c设备文件名*/
 #define LINUX_IIC_FILE  "/dev/i2c-3"
+
 /*刷新时间(s)*/
 #define REFRESH_TIME    1
 
-/*是否启用运行时间控制: 若启用，屏幕只会在固定时间点亮*/
+/*网络接口优先级: 0=WLAN优先, 1=LAN优先 (default)*/
+#define PREFER_LAN      1
+
+/*是否启用运行时间控制*/
 #define ENABLE_RUNNING_PERIOD   0
-
-#if ENABLE_RUNNING_PERIOD
-#define BEG_H           7   //开始运行时
-#define BEG_M           00  //开始运行分
-#define END_H           23  //结束运行时
-#define END_M           00  //结束运行分
-#endif //ENABLE_RUNNING_PERIOD
-
-#define WIRELESS    "/sys/class/net/"WLAN_IF"/operstate"
-#define ETHERNET    "/sys/class/net/"ETH_IF"/operstate"
-
 ```
 
-将
+根据实际情况修改 `LINUX_IIC_FILE` 和其他参数。
 
-```
-#define LINUX_IIC_FILE  "/dev/i2c-3"
-```
+### 6. 编译
 
-改为需要的文件地址，由于本次连接的正好也是i2c3，不需要更改
-
-如果需要更改其他值，更改完成后退出编辑器即可
-
-**8）构建**
-
-```
-cd Software/
+```bash
+cd Software
 make
 ```
 
-如果没有报错，此时ls一下就可以看到编译出来的文件
+编译成功后会生成 `RTDevInfo` 可执行文件：
 
-```
-user@orangepizero3:~/OPi4_RTDevInfo/Software$ ls
+```bash
+user@orangepizero3:~/OPiZero3_RTDevInfo/Software$ ls
 inc  Makefile  obj  RTDevInfo  src
 ```
 
-RTDevInfo就是可执行文件，可以运行测试，程序设计硬件操作，需要使用sudo权限
+### 7. 运行
 
-```
+```bash
 sudo ./RTDevInfo
 ```
 
-没用问题的话，屏幕会成功点亮，程序默认有个开机画面，如果不需要，可以在main.c中删去
+屏幕应该会点亮并显示系统信息。如果想跳过启动画面，可以：
 
-## 结束
+```bash
+sudo ./RTDevInfo -r
+```
 
-我也是个小白，部分代码参考网上的文章，侵删。
+## 主要特性
 
-感谢阅读
+### 已修复的Bug
+
+✅ **内存显示准确** - 使用 `/proc/meminfo` 读取实际可用内存
+✅ **磁盘溢出修复** - 数字不再超过屏幕边界
+✅ **网络优先级** - 可配置LAN或WLAN优先显示
+✅ **适配Debian Bookworm** - 默认使用 `end0` 网卡
+
+### 显示格式说明
+
+- **内存**: `Mem:XXX MB`（实时更新）
+- **磁盘**: 
+  - `<100GB` 显示2位小数：`50.25 GB`
+  - `≥100GB` 显示1位小数：`100.0 GB`
+- **温度**: `XX.XX°C`
+- **网速**: 自动单位转换 B/s → KB/s → MB/s → GB/s
+
+## 文件结构
+
+```
+OPiZero3_RTDevInfo/
+├── Software/
+│   ├── src/
+│   │   ├── main.c           # 主程序（显示逻辑）
+│   │   ├── DevInfo.c        # 系统信息获取
+│   │   ├── NetTools.c       # 网络工具函数
+│   │   ├── SSD1306_IIC.c    # OLED驱动
+│   │   └── ...
+│   ├── inc/
+│   │   ├── UserCfg.h        # 用户配置
+│   │   ├── DevInfo.h
+│   │   ├── NetTools.h
+│   │   ├── SSD1306_IIC.h
+│   │   └── ...
+│   └── Makefile
+├── HardWare/                # 转接板设计（立创EDA）
+├── README.md
+└── rtdevinfo.jpg           # 效果图
+```
+
+## 常见问题
+
+### Q: OLED不显示
+A: 检查I2C是否正常连接（使用 `i2cdetect`），确认 `LINUX_IIC_FILE` 配置正确
+
+### Q: 内存显示不变化
+A: 确保 `/proc/meminfo` 可读，检查程序权限
+
+### Q: 网络显示错误
+A: 检查网卡名称是否正确（`ip link` 查看），根据需要调整 `WLAN_IF` 和 `ETH_IF`
+
+## 致谢
+
+感谢参考的开源项目和社区支持。
+
+## 许可证
+
+MIT License
+
