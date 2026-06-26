@@ -69,7 +69,7 @@ unsigned long GetMemTotal()
 
     if(sysinfo(&s_info) == 0)
     {
-        return s_info.totalram * s_info.mem_unit;
+        return (unsigned long)((unsigned long long)s_info.totalram * s_info.mem_unit);
     }
     else
     {
@@ -83,7 +83,7 @@ unsigned long GetMemFree()
     struct sysinfo s_info;
     if(sysinfo(&s_info) == 0)
     {
-        return s_info.freeram * s_info.mem_unit;
+        return (unsigned long)((unsigned long long)s_info.freeram * s_info.mem_unit);
     }
     else
     {
