@@ -13,7 +13,7 @@
 
 #define TEMP_STR_LEN    64
 #define IP_STR_LEN      20
-#define TO_GB(b)        ((b) / pow(1024, 3))
+#define TO_MB(b)        ((b) / pow(1024, 2))
 #define TO_SEC(h, m)    ((h) * 3600 + (m) * 60)
 
 
@@ -62,10 +62,10 @@ int main(int argc, char* argv[])
     if (!(argc >= 2 && !strcmp(argv[1], "-r")))
     {
         SSD1306_FillRect2(2, 0, 5, 128, White);
-        SSD1306_PutString(21, 2, "OrangePi 4 LTS", MF_6x8, White);
-        SSD1306_PutString(15, 16, "AQin", MF_16x26, White);
+        SSD1306_PutString(18, 2, "OrangePi Zero3", MF_6x8, White);
+        SSD1306_PutString(30, 16, "Zhe", MF_16x26, White);
         SSD1306_PutString(90, 25, "</>", MF_11x18, White);
-        SSD1306_PutString(15, 52, "Ubuntu 20.04.6", MF_6x8, White);
+        SSD1306_PutString(12, 52, "Debian Bookworm", MF_6x8, White);
         SSD1306_UpdateScreen();
         sleep(3);
     }
@@ -170,8 +170,8 @@ void Work()
     totalMem = GetMemTotal();
 
     memset(tempStr, 0, TEMP_STR_LEN);
-    sprintf(tempStr, "Mem:%.1lf %d%%",
-            TO_GB(totalMem - freeMem),
+    sprintf(tempStr, "Mem:%.0lf %d%%",
+            TO_MB(totalMem - freeMem),
             (int)((totalMem - freeMem) * 1.0 / totalMem * 100));
     SSD1306_PutString(0, 28, tempStr, MF_7x10, White);
 
@@ -210,7 +210,7 @@ void Work()
     /*显示磁盘剩余容量*/
     SSD1306_PutString(7, 42, "Disk", MF_6x8, White);
     memset(tempStr, 0, TEMP_STR_LEN);
-    sprintf(tempStr, "%.2f", (float)GetAvailDisk() / 1000);
+    sprintf(tempStr, "%6.2f", (float)GetAvailDisk() / 1000);
     SSD1306_PutString(4, 52, tempStr, MF_6x8, White);
 
     SSD1306_UpdateScreen();
