@@ -7,6 +7,9 @@
 /*刷新时间(s)*/
 #define REFRESH_TIME    1
 
+/*网络接口优先级: 0=WLAN优先, 1=LAN优先 (default)*/
+#define PREFER_LAN      1
+
 /*是否启用运行时间控制: 若启用，屏幕只会在固定时间点亮*/
 #define ENABLE_RUNNING_PERIOD   0
 
