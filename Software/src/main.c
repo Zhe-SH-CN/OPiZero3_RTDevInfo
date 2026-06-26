@@ -13,7 +13,7 @@
 
 #define TEMP_STR_LEN    64
 #define IP_STR_LEN      20
-#define TO_MB(b)        ((b) / pow(1024, 2))
+#define TO_MB(b)        ((double)(b) / (1024.0 * 1024.0))
 #define TO_SEC(h, m)    ((h) * 3600 + (m) * 60)
 
 
@@ -33,9 +33,9 @@ int CUR_SEC = 0;
 
 char ipStr[IP_STR_LEN];
 char tempStr[TEMP_STR_LEN];
-unsigned int freeMem, totalMem;
+unsigned long freeMem, totalMem;
 long int start_rcv_rates = 0;   //保存开始时的流量计数
-long int end_rcv_rates = 0;	    //保存结束时的流量计数
+long int end_rcv_rates = 0;	    //保存结束时的流��计数
 long int start_tx_rates = 0;    //保存开始时的流量计数
 long int end_tx_rates = 0;      //保存结束时的流量计数
 float tx_rates = 0;             //上传速度Bytes/s
@@ -170,8 +170,9 @@ void Work()
     totalMem = GetMemTotal();
 
     memset(tempStr, 0, TEMP_STR_LEN);
+    double usedMemMB = TO_MB(totalMem - freeMem);
     sprintf(tempStr, "Mem:%.0lf %d%%",
-            TO_MB(totalMem - freeMem),
+            usedMemMB,
             (int)((totalMem - freeMem) * 1.0 / totalMem * 100));
     SSD1306_PutString(0, 28, tempStr, MF_7x10, White);
 
@@ -210,7 +211,12 @@ void Work()
     /*显示磁盘剩余容量*/
     SSD1306_PutString(7, 42, "Disk", MF_6x8, White);
     memset(tempStr, 0, TEMP_STR_LEN);
-    sprintf(tempStr, "%6.2f", (float)GetAvailDisk() / 1000);
+    float availDiskGB = (float)GetAvailDisk() / 1024.0;  // Convert MB to GB
+    if (availDiskGB > 99.99)
+    {
+        availDiskGB = 99.99;
+    }
+    sprintf(tempStr, "%6.2f", availDiskGB);
     SSD1306_PutString(4, 52, tempStr, MF_6x8, White);
 
     SSD1306_UpdateScreen();
