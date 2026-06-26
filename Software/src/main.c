@@ -35,7 +35,7 @@ char ipStr[IP_STR_LEN];
 char tempStr[TEMP_STR_LEN];
 unsigned long freeMem, totalMem;
 long int start_rcv_rates = 0;   //保存开始时的流量计数
-long int end_rcv_rates = 0;	    //保存结束时的流��计数
+long int end_rcv_rates = 0;	    //保存结束时的流量计数
 long int start_tx_rates = 0;    //保存开始时的流量计数
 long int end_tx_rates = 0;      //保存结束时的流量计数
 float tx_rates = 0;             //上传速度Bytes/s
@@ -137,27 +137,60 @@ void Work()
     wlanState = GetWirelessState();
     ethState = GetEthernetState();
 
+    /*根据配置优先级显示网络*/
+    int netConnected = 0;
+    char* activeIF = NULL;
+    
+    #if PREFER_LAN
+    // LAN优先 (default)
+    if (ethState == STATE_CONNECT)
+    {
+        SSD1306_DrawBitMap(0, 0, ETH_CONNECT, 16, 16, White);
+        memset(ipStr, 0, IP_STR_LEN);
+        int ret = GetLocalIP(ETH_IF, ipStr);
+        if (ret != 0)   memset(ipStr, 0, IP_STR_LEN);
+        SSD1306_PutString(17, 4, ipStr, MF_7x10, White);
+        netConnected = 1;
+        activeIF = ETH_IF;
+    }
+    else if (wlanState == STATE_CONNECT)
+    {
+        SSD1306_DrawBitMap(0, 0, WIFI_CONNECT, 16, 16, White);
+        memset(ipStr, 0, IP_STR_LEN);
+        int ret = GetLocalIP(WLAN_IF, ipStr);
+        if (ret != 0)   memset(ipStr, 0, IP_STR_LEN);
+        SSD1306_PutString(17, 4, ipStr, MF_7x10, White);
+        netConnected = 1;
+        activeIF = WLAN_IF;
+    }
+    #else
+    // WLAN优先
     if (wlanState == STATE_CONNECT)
     {
         SSD1306_DrawBitMap(0, 0, WIFI_CONNECT, 16, 16, White);
         memset(ipStr, 0, IP_STR_LEN);
-        int ret = 0;
-        ret = GetLocalIP(WLAN_IF, ipStr);
+        int ret = GetLocalIP(WLAN_IF, ipStr);
         if (ret != 0)   memset(ipStr, 0, IP_STR_LEN);
         SSD1306_PutString(17, 4, ipStr, MF_7x10, White);
+        netConnected = 1;
+        activeIF = WLAN_IF;
     }
     else if (ethState == STATE_CONNECT)
     {
         SSD1306_DrawBitMap(0, 0, ETH_CONNECT, 16, 16, White);
         memset(ipStr, 0, IP_STR_LEN);
-        int ret = 0;
-        ret = GetLocalIP(ETH_IF, ipStr);
+        int ret = GetLocalIP(ETH_IF, ipStr);
         if (ret != 0)   memset(ipStr, 0, IP_STR_LEN);
         SSD1306_PutString(17, 4, ipStr, MF_7x10, White);
+        netConnected = 1;
+        activeIF = ETH_IF;
     }
-    else
+    #endif
+    
+    if (!netConnected)
     {
         SSD1306_DrawBitMap(0, 0, NET_ERROR, 16, 16, White);
+        activeIF = NULL;
     }
 
     /*显示CPU利用率*/
@@ -216,8 +249,18 @@ void Work()
     {
         availDiskGB = 99.99;
     }
-    sprintf(tempStr, "%6.2f", availDiskGB);
-    SSD1306_PutString(4, 52, tempStr, MF_6x8, White);
+    
+    // Format: >100GB shows 1 decimal, <100GB shows 2 decimals (always 4 characters)
+    if (availDiskGB >= 100.0)
+    {
+        sprintf(tempStr, "%5.1f", availDiskGB);  // e.g., "100.0"
+    }
+    else
+    {
+        sprintf(tempStr, "%5.2f", availDiskGB);  // e.g., " 50.25"
+    }
+    // Position moved to x=6 to avoid overlap with separator line at x=37
+    SSD1306_PutString(6, 52, tempStr, MF_6x8, White);
 
     SSD1306_UpdateScreen();
 }
