@@ -245,22 +245,18 @@ void Work()
     SSD1306_PutString(7, 42, "Disk", MF_6x8, White);
     memset(tempStr, 0, TEMP_STR_LEN);
     float availDiskGB = (float)GetAvailDisk() / 1024.0;  // Convert MB to GB
-    if (availDiskGB > 99.99)
-    {
-        availDiskGB = 99.99;
-    }
     
     // Format: >100GB shows 1 decimal, <100GB shows 2 decimals (always 4 characters)
     if (availDiskGB >= 100.0)
     {
-        sprintf(tempStr, "%5.1f", availDiskGB);  // e.g., "100.0"
+        sprintf(tempStr, "%5.1f", availDiskGB);  // e.g., "100.0" (no cap)
     }
     else
     {
         sprintf(tempStr, "%5.2f", availDiskGB);  // e.g., " 50.25"
     }
-    // Position moved to x=6 to avoid overlap with separator line at x=37
-    SSD1306_PutString(6, 52, tempStr, MF_6x8, White);
+    // Position x=2 (left aligned in disk section)
+    SSD1306_PutString(2, 52, tempStr, MF_6x8, White);
 
     SSD1306_UpdateScreen();
 }
