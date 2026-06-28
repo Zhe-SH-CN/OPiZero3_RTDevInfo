@@ -4,10 +4,14 @@
 typedef struct
 {
     char name[20];  
-    unsigned int user;
-    unsigned int nice;
-    unsigned int system;
-    unsigned int idle;
+    unsigned long long user;
+    unsigned long long nice;
+    unsigned long long system;
+    unsigned long long idle;
+    unsigned long long iowait;
+    unsigned long long irq;
+    unsigned long long softirq;
+    unsigned long long steal;
 }CPU_OCCUPY;
 
 float GetCpuUsage();
