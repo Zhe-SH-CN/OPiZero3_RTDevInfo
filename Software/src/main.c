@@ -39,6 +39,7 @@ long int end_rcv_rates = 0;	    //保存结束时的流量计数
 long int start_tx_rates = 0;    //保存开始时的流量计数
 long int end_tx_rates = 0;      //保存结束时的流量计数
 float tx_rates = 0;             //上传速度Bytes/s
+char* activeIF = NULL;          //当前测速/显示使用的网卡(遵循PREFER_LAN)
 float rx_rates = 0;             //下载速度Bytes/s
 CPU_OCCUPY cpu_stat1;           //用于CPU利用率计算
 CPU_OCCUPY cpu_stat2;
@@ -97,19 +98,37 @@ int main(int argc, char* argv[])
         {
 #endif //ENABLE_RUNNING_PERIOD
             Work();
-            GetCurNetFlow(wlanState == STATE_CONNECT ? WLAN_IF : (ethState == STATE_CONNECT ? ETH_IF : NULL),
-                        &start_rcv_rates, &start_tx_rates);
+            /*测速网卡与显示保持一致(遵循PREFER_LAN)
+              修复: 之前固定优先wlan0, 有线在线时屏幕显示的仍是wlan0的0B/s网速 */
+            if (activeIF != NULL)
+            {
+                GetCurNetFlow(activeIF, &start_rcv_rates, &start_tx_rates);
+            }
+            else
+            {
+                start_rcv_rates = 0;
+                start_tx_rates = 0;
+            }
             get_cpuoccupy((CPU_OCCUPY *)&cpu_stat1);
             sleep(REFRESH_TIME);
             get_cpuoccupy((CPU_OCCUPY *)&cpu_stat2);
-            GetCurNetFlow(wlanState == STATE_CONNECT ? WLAN_IF : (ethState == STATE_CONNECT ? ETH_IF : NULL),
-                            &end_rcv_rates, &end_tx_rates);
+            if (activeIF != NULL)
+            {
+                GetCurNetFlow(activeIF, &end_rcv_rates, &end_tx_rates);
+            }
+            else
+            {
+                end_rcv_rates = 0;
+                end_tx_rates = 0;
+            }
 
             //计算CPU利用率
             cpuUsage = cal_cpuoccupy((CPU_OCCUPY *)&cpu_stat1,(CPU_OCCUPY *)&cpu_stat2);
             //计算网速
             rx_rates = (float)(end_rcv_rates - start_rcv_rates) / REFRESH_TIME;
             tx_rates = (float)(end_tx_rates - start_tx_rates) / REFRESH_TIME;
+            if (rx_rates < 0) rx_rates = 0;   //换网卡/读取失败时防止出现负数
+            if (tx_rates < 0) tx_rates = 0;
 #if ENABLE_RUNNING_PERIOD
         }
         else
@@ -139,7 +158,7 @@ void Work()
 
     /*根据配置优先级显示网络*/
     int netConnected = 0;
-    char* activeIF = NULL;
+    activeIF = NULL;
     
     #if PREFER_LAN
     // LAN优先 (default)
